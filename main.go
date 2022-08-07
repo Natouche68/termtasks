@@ -5,6 +5,8 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"golang.org/x/term"
 )
 
 type task struct {
@@ -20,6 +22,10 @@ type project struct {
 type model struct {
 	projects []project
 }
+
+var terminalWidth int
+var terminalHeight int
+var terminalSizeError error
 
 func initModel() model {
 	return model{
@@ -58,13 +64,27 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	s := fmt.Sprintf("%v", m)
-	return s
+	style := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#37dcff")).
+		Background(lipgloss.Color("#000f3b")).
+		Padding(4, 12, 4, 12).
+		Margin(2, 1, 2, 1).
+		Width(terminalWidth - 2).
+		Height(terminalHeight - 4).
+		Align(lipgloss.Center)
+
+	return style.Render("Hello World !")
 }
 
 func main() {
+	terminalWidth, terminalHeight, terminalSizeError = term.GetSize(int(os.Stdout.Fd()))
+	if terminalSizeError != nil {
+		fmt.Printf("There was an error while getting the terminal's size : %v\n", terminalSizeError)
+	}
+
 	if err := tea.NewProgram(initModel(), tea.WithAltScreen()).Start(); err != nil {
-		fmt.Printf("There was an error : %v\n", err)
+		fmt.Printf("There was an error during the starting of the programm : %v\n", err)
 		os.Exit(1)
 	}
 }
