@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/user"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -64,17 +65,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	style := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#37dcff")).
-		Background(lipgloss.Color("#000f3b")).
-		Padding(4, 12, 4, 12).
-		Margin(2, 1, 2, 1).
-		Width(terminalWidth - 2).
-		Height(terminalHeight - 4).
-		Align(lipgloss.Center)
+	currentUser, userError := user.Current()
+	if userError != nil {
+		fmt.Printf("There was an error while getting the current user : %v\n", userError)
+	}
 
-	return style.Render("Hello World !")
+	titlebarStyle := lipgloss.NewStyle().
+		Align(lipgloss.Center).
+		Foreground(lipgloss.Color("#9de2ff")).
+		Background(lipgloss.Color("#0b1f88")).
+		Width(terminalWidth).
+		PaddingTop(1).
+		PaddingBottom(1)
+
+	titlebar := fmt.Sprintf(
+		"%s%s",
+		titlebarStyle.Copy().Bold(true).PaddingBottom(0).Render("TermTasks"),
+		titlebarStyle.Copy().Italic(true).Render(currentUser.Username),
+	)
+
+	return titlebar
 }
 
 func main() {
