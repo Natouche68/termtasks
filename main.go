@@ -10,6 +10,19 @@ import (
 	"golang.org/x/term"
 )
 
+var styles = map[string]lipgloss.Style{
+	"statusBar": lipgloss.NewStyle().
+		Background(lipgloss.Color("#3e3e3e")).
+		Foreground(lipgloss.Color("#dfdfdf")).
+		PaddingLeft(1),
+
+	"statusBarTitle": lipgloss.NewStyle().
+		Background(lipgloss.Color("#00b202")).
+		Foreground(lipgloss.Color("#b2ffb3")).
+		PaddingLeft(1).
+		PaddingRight(1),
+}
+
 type task struct {
 	name      string
 	completed bool
@@ -21,25 +34,34 @@ type project struct {
 }
 
 type model struct {
-	projects []project
+	currentProject int
+	currentTask    int
+	projects       []project
 }
-
-var terminalWidth int
-var terminalHeight int
-var terminalSizeError error
 
 func initModel() model {
 	return model{
+		currentProject: 0,
+		currentTask:    0,
 		projects: []project{
 			{
 				name: "TermTasks",
 				tasks: []task{
 					{
 						name:      "Create the view function",
-						completed: false,
+						completed: true,
 					},
 					{
 						name:      "Add COLORS ! 🎉",
+						completed: false,
+					},
+				},
+			},
+			{
+				name: "Other",
+				tasks: []task{
+					{
+						name:      "Give carrots to Bruno",
 						completed: false,
 					},
 				},
@@ -65,34 +87,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
+	terminalWidth, _, terminalSizeError := term.GetSize(int(os.Stdout.Fd()))
+	if terminalSizeError != nil {
+		return fmt.Sprintf("There was an error while getting the terminal's size : %v\n", terminalSizeError)
+	}
+
+	var s string
+
 	currentUser, userError := user.Current()
 	if userError != nil {
 		fmt.Printf("There was an error while getting the current user : %v\n", userError)
 	}
 
-	titlebarStyle := lipgloss.NewStyle().
-		Align(lipgloss.Center).
-		Foreground(lipgloss.Color("#9de2ff")).
-		Background(lipgloss.Color("#0b1f88")).
-		Width(terminalWidth).
-		PaddingTop(1).
-		PaddingBottom(1)
+	statusBarTitle := styles["statusBarTitle"].Render("TermTasks")
+	statusBar := styles["statusBar"].Copy().Width(terminalWidth - lipgloss.Width(statusBarTitle)).Render(currentUser.Username)
 
-	titlebar := fmt.Sprintf(
-		"%s%s",
-		titlebarStyle.Copy().Bold(true).PaddingBottom(0).Render("TermTasks"),
-		titlebarStyle.Copy().Italic(true).Render(currentUser.Username),
-	)
-
-	return titlebar
+	s = fmt.Sprintf("%s", lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		statusBarTitle,
+		statusBar,
+	))
+	return s
 }
 
 func main() {
-	terminalWidth, terminalHeight, terminalSizeError = term.GetSize(int(os.Stdout.Fd()))
-	if terminalSizeError != nil {
-		fmt.Printf("There was an error while getting the terminal's size : %v\n", terminalSizeError)
-	}
-
 	if err := tea.NewProgram(initModel(), tea.WithAltScreen()).Start(); err != nil {
 		fmt.Printf("There was an error during the starting of the programm : %v\n", err)
 		os.Exit(1)
