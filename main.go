@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -21,6 +22,44 @@ var styles = map[string]lipgloss.Style{
 		Foreground(lipgloss.Color("#b2ffb3")).
 		PaddingLeft(1).
 		PaddingRight(1),
+
+	"tab": lipgloss.NewStyle().
+		Border(lipgloss.Border{
+			Top:         "─",
+			Bottom:      "─",
+			Left:        "│",
+			Right:       "│",
+			TopLeft:     "╭",
+			TopRight:    "╮",
+			BottomLeft:  "┴",
+			BottomRight: "┴",
+		}, true).
+		BorderForeground(lipgloss.Color("#00b202")).
+		Padding(0, 1),
+
+	"activeTab": lipgloss.NewStyle().
+		Border(lipgloss.Border{
+			Top:         "─",
+			Bottom:      " ",
+			Left:        "│",
+			Right:       "│",
+			TopLeft:     "╭",
+			TopRight:    "╮",
+			BottomLeft:  "┘",
+			BottomRight: "└",
+		}, true).
+		BorderForeground(lipgloss.Color("#00b202")).
+		Foreground(lipgloss.Color("#00b202")).
+		Padding(0, 1),
+
+	"tabGap": lipgloss.NewStyle().
+		Border(lipgloss.Border{
+			Bottom: "─",
+		}, true).
+		BorderTop(false).
+		BorderLeft(false).
+		BorderRight(false).
+		BorderForeground(lipgloss.Color("#00b202")),
 }
 
 type task struct {
@@ -80,6 +119,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+
+		case "tab":
+			m.currentProject++
+			if m.currentProject == len(m.projects) {
+				m.currentProject = 0
+			}
+
+		case "shift+tab":
+			m.currentProject--
+			if m.currentProject == -1 {
+				m.currentProject = len(m.projects) - 1
+			}
 		}
 	}
 
@@ -92,22 +143,44 @@ func (m model) View() string {
 		return fmt.Sprintf("There was an error while getting the terminal's size : %v\n", terminalSizeError)
 	}
 
-	var s string
-
 	currentUser, userError := user.Current()
 	if userError != nil {
 		fmt.Printf("There was an error while getting the current user : %v\n", userError)
 	}
 
-	statusBarTitle := styles["statusBarTitle"].Render("TermTasks")
-	statusBar := styles["statusBar"].Copy().Width(terminalWidth - lipgloss.Width(statusBarTitle)).Render(currentUser.Username)
+	// Tabs
+	var tabs string
+	for i, openProject := range m.projects {
+		var tab string
+		if m.currentProject == i {
+			tab = styles["activeTab"].Render(openProject.name)
+		} else {
+			tab = styles["tab"].Render(openProject.name)
+		}
+		tabs = lipgloss.JoinHorizontal(
+			lipgloss.Top,
+			tabs,
+			tab,
+		)
+	}
+	tabsGap := styles["tabGap"].Render(strings.Repeat(" ", terminalWidth-lipgloss.Width(tabs)))
+	tabs = lipgloss.JoinHorizontal(lipgloss.Bottom, tabs, tabsGap)
 
-	s = fmt.Sprintf("%s", lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		statusBarTitle,
-		statusBar,
-	))
-	return s
+	// Status Bar
+	statusBarTitle := styles["statusBarTitle"].Render("TermTasks")
+	statusBar := styles["statusBar"].
+		Copy().
+		Width(terminalWidth - lipgloss.Width(statusBarTitle)).
+		Render(currentUser.Username)
+
+	return fmt.Sprintf("%s\n\n\n\n\n\n\n%s",
+		tabs,
+		lipgloss.JoinHorizontal(
+			lipgloss.Top,
+			statusBarTitle,
+			statusBar,
+		),
+	)
 }
 
 func main() {
