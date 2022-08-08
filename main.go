@@ -60,6 +60,29 @@ var styles = map[string]lipgloss.Style{
 		BorderLeft(false).
 		BorderRight(false).
 		BorderForeground(lipgloss.Color("#00b202")),
+
+	"task": lipgloss.NewStyle().
+		Border(lipgloss.Border{
+			Left: "│",
+		}, true).
+		BorderTop(false).
+		BorderBottom(false).
+		BorderRight(false).
+		BorderForeground(lipgloss.Color("#8a8a8a")).
+		PaddingLeft(1).
+		MarginBottom(1),
+
+	"currentTask": lipgloss.NewStyle().
+		Border(lipgloss.Border{
+			Left: ">",
+		}, true).
+		BorderTop(false).
+		BorderBottom(false).
+		BorderRight(false).
+		BorderForeground(lipgloss.Color("#00b202")).
+		Foreground(lipgloss.Color("#00b202")).
+		PaddingLeft(1).
+		MarginBottom(1),
 }
 
 type task struct {
@@ -131,6 +154,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.currentProject == -1 {
 				m.currentProject = len(m.projects) - 1
 			}
+
+		case "down":
+			m.currentTask++
+			if m.currentTask == len(m.projects[m.currentProject].tasks) {
+				m.currentTask = 0
+			}
+
+		case "up":
+			m.currentTask--
+			if m.currentTask == -1 {
+				m.currentTask = len(m.projects[m.currentProject].tasks) - 1
+			}
 		}
 	}
 
@@ -166,6 +201,31 @@ func (m model) View() string {
 	tabsGap := styles["tabGap"].Render(strings.Repeat(" ", terminalWidth-lipgloss.Width(tabs)))
 	tabs = lipgloss.JoinHorizontal(lipgloss.Bottom, tabs, tabsGap)
 
+	// Tasks
+	var tasks string
+	for i, task := range m.projects[m.currentProject].tasks {
+		var renderedTask string
+		if i == m.currentTask {
+			if task.completed {
+				renderedTask = styles["currentTask"].Copy().Strikethrough(true).Render(task.name)
+			} else {
+				renderedTask = styles["currentTask"].Render(task.name)
+			}
+		} else {
+			if task.completed {
+				renderedTask = styles["task"].Copy().Strikethrough(true).Render(task.name)
+			} else {
+				renderedTask = styles["task"].Render(task.name)
+			}
+		}
+
+		tasks = lipgloss.JoinVertical(
+			lipgloss.Left,
+			tasks,
+			renderedTask,
+		)
+	}
+
 	// Status Bar
 	statusBarTitle := styles["statusBarTitle"].Render("TermTasks")
 	statusBar := styles["statusBar"].
@@ -173,8 +233,9 @@ func (m model) View() string {
 		Width(terminalWidth - lipgloss.Width(statusBarTitle)).
 		Render(currentUser.Username)
 
-	return fmt.Sprintf("%s\n\n\n\n\n\n\n%s",
+	return fmt.Sprintf("%s\n%s\n\n\n\n\n\n\n%s",
 		tabs,
+		tasks,
 		lipgloss.JoinHorizontal(
 			lipgloss.Top,
 			statusBarTitle,
