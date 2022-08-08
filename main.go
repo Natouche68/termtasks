@@ -83,6 +83,16 @@ var styles = map[string]lipgloss.Style{
 		Foreground(lipgloss.Color("#00b202")).
 		PaddingLeft(1).
 		MarginBottom(1),
+
+	"title": lipgloss.NewStyle().
+		Bold(true).
+		Italic(true).
+		Padding(0, 1).
+		MarginBottom(1).
+		Background(lipgloss.Color("#00b202")),
+
+	"help": lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#8a8a8a")),
 }
 
 type task struct {
@@ -98,6 +108,7 @@ type project struct {
 type model struct {
 	currentProject int
 	currentTask    int
+	currentAction  string // Can be : tasks, help or add
 	projects       []project
 }
 
@@ -105,6 +116,7 @@ func initModel() model {
 	return model{
 		currentProject: 0,
 		currentTask:    0,
+		currentAction:  "tasks",
 		projects: []project{
 			{
 				name: "TermTasks",
@@ -169,6 +181,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			m.projects[m.currentProject].tasks[m.currentTask].completed = !m.projects[m.currentProject].tasks[m.currentTask].completed
+
+		case "h":
+			if m.currentAction == "help" {
+				m.currentAction = "tasks"
+			} else {
+				m.currentAction = "help"
+			}
 		}
 	}
 
@@ -176,7 +195,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	terminalWidth, _, terminalSizeError := term.GetSize(int(os.Stdout.Fd()))
+	terminalWidth, terminalHeight, terminalSizeError := term.GetSize(int(os.Stdout.Fd()))
 	if terminalSizeError != nil {
 		return fmt.Sprintf("There was an error while getting the terminal's size : %v\n", terminalSizeError)
 	}
@@ -186,65 +205,118 @@ func (m model) View() string {
 		fmt.Printf("There was an error while getting the current user : %v\n", userError)
 	}
 
-	// Tabs
-	var tabs string
-	for i, openProject := range m.projects {
-		var tab string
-		if m.currentProject == i {
-			tab = styles["activeTab"].Render(openProject.name)
-		} else {
-			tab = styles["tab"].Render(openProject.name)
+	if m.currentAction == "tasks" {
+		// Tabs
+		var tabs string
+		for i, openProject := range m.projects {
+			var tab string
+			if m.currentProject == i {
+				tab = styles["activeTab"].Render(openProject.name)
+			} else {
+				tab = styles["tab"].Render(openProject.name)
+			}
+			tabs = lipgloss.JoinHorizontal(
+				lipgloss.Top,
+				tabs,
+				tab,
+			)
 		}
-		tabs = lipgloss.JoinHorizontal(
-			lipgloss.Top,
-			tabs,
-			tab,
+		tabsGap := styles["tabGap"].Render(strings.Repeat(" ", terminalWidth-lipgloss.Width(tabs)))
+		tabs = lipgloss.JoinHorizontal(lipgloss.Bottom, tabs, tabsGap)
+
+		// Tasks
+		var tasks string
+		for i, task := range m.projects[m.currentProject].tasks {
+			var renderedTask string
+			if i == m.currentTask {
+				if task.completed {
+					renderedTask = styles["currentTask"].Copy().Strikethrough(true).Render(task.name)
+				} else {
+					renderedTask = styles["currentTask"].Render(task.name)
+				}
+			} else {
+				if task.completed {
+					renderedTask = styles["task"].Copy().Strikethrough(true).Render(task.name)
+				} else {
+					renderedTask = styles["task"].Render(task.name)
+				}
+			}
+
+			tasks = lipgloss.JoinVertical(
+				lipgloss.Left,
+				tasks,
+				renderedTask,
+			)
+		}
+
+		// Blank between tasks and status bar
+		blankSpace := strings.Repeat(
+			"\n",
+			terminalHeight-lipgloss.Height(lipgloss.JoinVertical(lipgloss.Left, tabs, tasks))-3,
 		)
-	}
-	tabsGap := styles["tabGap"].Render(strings.Repeat(" ", terminalWidth-lipgloss.Width(tabs)))
-	tabs = lipgloss.JoinHorizontal(lipgloss.Bottom, tabs, tabsGap)
 
-	// Tasks
-	var tasks string
-	for i, task := range m.projects[m.currentProject].tasks {
-		var renderedTask string
-		if i == m.currentTask {
-			if task.completed {
-				renderedTask = styles["currentTask"].Copy().Strikethrough(true).Render(task.name)
-			} else {
-				renderedTask = styles["currentTask"].Render(task.name)
-			}
-		} else {
-			if task.completed {
-				renderedTask = styles["task"].Copy().Strikethrough(true).Render(task.name)
-			} else {
-				renderedTask = styles["task"].Render(task.name)
-			}
-		}
+		// Status Bar
+		statusBarTitle := styles["statusBarTitle"].Render("TermTasks")
+		statusBar := styles["statusBar"].
+			Copy().
+			Width(terminalWidth - lipgloss.Width(statusBarTitle)).
+			Render(currentUser.Username)
 
-		tasks = lipgloss.JoinVertical(
+		return lipgloss.JoinVertical(
 			lipgloss.Left,
+			tabs,
 			tasks,
-			renderedTask,
+			blankSpace,
+			lipgloss.JoinHorizontal(
+				lipgloss.Top,
+				statusBarTitle,
+				statusBar,
+			),
+		)
+	} else if m.currentAction == "add" {
+		return "You can't add a task now 😥..."
+	} else if m.currentAction == "help" {
+		title := styles["title"].Render("Help")
+
+		help := styles["help"].Render(fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
+			"q or ctrl+c  : quit",
+			"h            : help",
+			"",
+			"tab          : switch project (to the right)",
+			"shift+tab    : switch project (to the left)",
+			"up           : move the cursor up",
+			"down         : move the cursor down",
+			"",
+			"a            : add a task",
+		))
+
+		// Blank between help and status bar
+		blankSpace := strings.Repeat(
+			"\n",
+			terminalHeight-lipgloss.Height(lipgloss.JoinVertical(lipgloss.Left, title, help))-3,
+		)
+
+		// Status Bar
+		statusBarTitle := styles["statusBarTitle"].Render("TermTasks")
+		statusBar := styles["statusBar"].
+			Copy().
+			Width(terminalWidth - lipgloss.Width(statusBarTitle)).
+			Render(currentUser.Username)
+
+		return lipgloss.JoinVertical(
+			lipgloss.Left,
+			title,
+			help,
+			blankSpace,
+			lipgloss.JoinHorizontal(
+				lipgloss.Top,
+				statusBarTitle,
+				statusBar,
+			),
 		)
 	}
 
-	// Status Bar
-	statusBarTitle := styles["statusBarTitle"].Render("TermTasks")
-	statusBar := styles["statusBar"].
-		Copy().
-		Width(terminalWidth - lipgloss.Width(statusBarTitle)).
-		Render(currentUser.Username)
-
-	return fmt.Sprintf("%s\n%s\n\n\n\n\n\n\n%s",
-		tabs,
-		tasks,
-		lipgloss.JoinHorizontal(
-			lipgloss.Top,
-			statusBarTitle,
-			statusBar,
-		),
-	)
+	return "There was an error, you seem to be trying to do an invalid action."
 }
 
 func main() {
