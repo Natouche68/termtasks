@@ -166,6 +166,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.currentTask == -1 {
 				m.currentTask = len(m.projects[m.currentProject].tasks) - 1
 			}
+
+		case "enter":
+			m.projects[m.currentProject].tasks[m.currentTask].completed = !m.projects[m.currentProject].tasks[m.currentTask].completed
 		}
 	}
 
