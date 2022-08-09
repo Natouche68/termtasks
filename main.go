@@ -17,7 +17,8 @@ var styles = map[string]lipgloss.Style{
 		Foreground(lipgloss.Color("#dfdfdf")).
 		PaddingLeft(1),
 
-	"statusBarTitle": lipgloss.NewStyle().
+	"title": lipgloss.NewStyle().
+		Bold(true).
 		Background(lipgloss.Color("#00b202")).
 		Foreground(lipgloss.Color("#b2ffb3")).
 		PaddingLeft(1).
@@ -84,14 +85,8 @@ var styles = map[string]lipgloss.Style{
 		PaddingLeft(1).
 		MarginBottom(1),
 
-	"title": lipgloss.NewStyle().
-		Bold(true).
-		Italic(true).
-		Padding(0, 1).
-		MarginBottom(1).
-		Background(lipgloss.Color("#00b202")),
-
 	"help": lipgloss.NewStyle().
+		Italic(true).
 		Foreground(lipgloss.Color("#8a8a8a")),
 }
 
@@ -256,7 +251,7 @@ func (m model) View() string {
 		)
 
 		// Status Bar
-		statusBarTitle := styles["statusBarTitle"].Render("TermTasks")
+		statusBarTitle := styles["title"].Render("TermTasks")
 		statusBar := styles["statusBar"].
 			Copy().
 			Width(terminalWidth - lipgloss.Width(statusBarTitle)).
@@ -276,7 +271,7 @@ func (m model) View() string {
 	} else if m.currentAction == "add" {
 		return "You can't add a task now 😥..."
 	} else if m.currentAction == "help" {
-		title := styles["title"].Render("Help")
+		title := styles["title"].Render("Help") + "\n"
 
 		help := styles["help"].Render(fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
 			"q or ctrl+c  : quit",
@@ -297,7 +292,7 @@ func (m model) View() string {
 		)
 
 		// Status Bar
-		statusBarTitle := styles["statusBarTitle"].Render("TermTasks")
+		statusBarTitle := styles["title"].Render("TermTasks")
 		statusBar := styles["statusBar"].
 			Copy().
 			Width(terminalWidth - lipgloss.Width(statusBarTitle)).
