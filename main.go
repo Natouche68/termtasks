@@ -220,6 +220,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.createTaskInput.Blur()
 				m.currentAction = "tasks"
 			}
+
+		case "d":
+			if m.currentAction == "tasks" {
+				m.projects[m.currentProject].tasks = append(
+					m.projects[m.currentProject].tasks[:m.currentTask],
+					m.projects[m.currentProject].tasks[m.currentTask+1:]...,
+				)
+				m.currentTask--
+				if m.currentTask == -1 {
+					m.currentTask = len(m.projects[m.currentProject].tasks) - 1
+				}
+			}
 		}
 	}
 
@@ -281,6 +293,9 @@ func (m model) View() string {
 				tasks,
 				renderedTask,
 			)
+		}
+		if len(m.projects[m.currentProject].tasks) == 0 {
+			tasks = styles["help"].Render("\nThis project is empty...")
 		}
 
 		// Blank between tasks and status bar
