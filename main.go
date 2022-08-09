@@ -6,6 +6,7 @@ import (
 	"os/user"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
@@ -101,17 +102,23 @@ type project struct {
 }
 
 type model struct {
-	currentProject int
-	currentTask    int
-	currentAction  string // Can be : tasks, help or add
-	projects       []project
+	createTaskInput textinput.Model
+	currentProject  int
+	currentTask     int
+	currentAction   string // Can be : tasks, help or add
+	projects        []project
 }
 
 func initModel() model {
+	ti := textinput.New()
+	ti.CharLimit = 50
+	ti.Width = 53
+
 	return model{
-		currentProject: 0,
-		currentTask:    0,
-		currentAction:  "tasks",
+		createTaskInput: ti,
+		currentProject:  0,
+		currentTask:     0,
+		currentAction:   "tasks",
 		projects: []project{
 			{
 				name: "TermTasks",
@@ -140,15 +147,20 @@ func initModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return textinput.Blink
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
 			return m, tea.Quit
+
+		case "q":
+			if m.currentAction != "add" {
+				return m, tea.Quit
+			}
 
 		case "tab":
 			m.currentProject++
@@ -175,18 +187,45 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "enter":
-			m.projects[m.currentProject].tasks[m.currentTask].completed = !m.projects[m.currentProject].tasks[m.currentTask].completed
+			if m.currentAction == "tasks" {
+				m.projects[m.currentProject].tasks[m.currentTask].completed = !m.projects[m.currentProject].tasks[m.currentTask].completed
+			} else if m.currentAction == "add" {
+				if m.createTaskInput.Value() != "" {
+					m.projects[m.currentProject].tasks = append(m.projects[m.currentProject].tasks, task{
+						name:      m.createTaskInput.Value(),
+						completed: false,
+					})
+					m.createTaskInput.Reset()
+				}
+				m.currentAction = "tasks"
+				m.createTaskInput.Blur()
+			}
 
 		case "h":
 			if m.currentAction == "help" {
 				m.currentAction = "tasks"
-			} else {
+			} else if m.currentAction == "tasks" {
 				m.currentAction = "help"
+			}
+
+		case "a":
+			if m.currentAction == "tasks" {
+				m.currentAction = "add"
+				m.createTaskInput.Focus()
+				return m, nil
+			}
+
+		case "esc":
+			if m.currentAction == "add" {
+				m.createTaskInput.Blur()
+				m.currentAction = "tasks"
 			}
 		}
 	}
 
-	return m, nil
+	var cmd tea.Cmd
+	m.createTaskInput, cmd = m.createTaskInput.Update(msg)
+	return m, cmd
 }
 
 func (m model) View() string {
@@ -269,7 +308,39 @@ func (m model) View() string {
 			),
 		)
 	} else if m.currentAction == "add" {
-		return "You can't add a task now 😥..."
+		title := styles["title"].Render("Add a new task") + "\n"
+
+		textInput := lipgloss.JoinVertical(
+			lipgloss.Left,
+			"What's the name of the new task ?",
+			m.createTaskInput.View(),
+			styles["help"].Render("(press esc to return to the home)"),
+		)
+
+		// Blank between input and status bar
+		blankSpace := strings.Repeat(
+			"\n",
+			terminalHeight-lipgloss.Height(lipgloss.JoinVertical(lipgloss.Left, title, textInput))-3,
+		)
+
+		// Status Bar
+		statusBarTitle := styles["title"].Render("TermTasks")
+		statusBar := styles["statusBar"].
+			Copy().
+			Width(terminalWidth - lipgloss.Width(statusBarTitle)).
+			Render(currentUser.Username)
+
+		return lipgloss.JoinVertical(
+			lipgloss.Left,
+			title,
+			textInput,
+			blankSpace,
+			lipgloss.JoinHorizontal(
+				lipgloss.Top,
+				statusBarTitle,
+				statusBar,
+			),
+		)
 	} else if m.currentAction == "help" {
 		title := styles["title"].Render("Help") + "\n"
 
