@@ -197,8 +197,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						name:      m.createTaskInput.Value(),
 						completed: false,
 					})
-					m.createTaskInput.Reset()
 				}
+				m.createTaskInput.Reset()
 				m.currentAction = "tasks"
 				m.createTaskInput.Blur()
 			}
@@ -219,6 +219,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "esc":
 			if m.currentAction == "add" {
+				m.createTaskInput.Reset()
 				m.createTaskInput.Blur()
 				m.currentAction = "tasks"
 			}
