@@ -164,12 +164,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "tab":
 			m.currentProject++
+			m.currentTask = 0
 			if m.currentProject == len(m.projects) {
 				m.currentProject = 0
 			}
 
 		case "shift+tab":
 			m.currentProject--
+			m.currentTask = 0
 			if m.currentProject == -1 {
 				m.currentProject = len(m.projects) - 1
 			}
