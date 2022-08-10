@@ -16,7 +16,7 @@ var styles = map[string]lipgloss.Style{
 	"statusBar": lipgloss.NewStyle().
 		Background(lipgloss.Color("#3e3e3e")).
 		Foreground(lipgloss.Color("#dfdfdf")).
-		PaddingLeft(1),
+		Padding(0, 1),
 
 	"title": lipgloss.NewStyle().
 		Bold(true).
@@ -308,9 +308,14 @@ func (m model) View() string {
 
 		// Status Bar
 		statusBarTitle := styles["title"].Render("TermTasks")
+		statusBarHelp := styles["statusBar"].
+			Copy().
+			Foreground(lipgloss.Color("#919191")).
+			Italic(true).
+			Render("h : help  q : quit")
 		statusBar := styles["statusBar"].
 			Copy().
-			Width(terminalWidth - lipgloss.Width(statusBarTitle)).
+			Width(terminalWidth - (lipgloss.Width(statusBarTitle) + lipgloss.Width(statusBarHelp))).
 			Render(currentUser.Username)
 
 		return lipgloss.JoinVertical(
@@ -322,6 +327,7 @@ func (m model) View() string {
 				lipgloss.Top,
 				statusBarTitle,
 				statusBar,
+				statusBarHelp,
 			),
 		)
 	} else if m.currentAction == "add" {
@@ -342,9 +348,14 @@ func (m model) View() string {
 
 		// Status Bar
 		statusBarTitle := styles["title"].Render("TermTasks")
+		statusBarHelp := styles["statusBar"].
+			Copy().
+			Foreground(lipgloss.Color("#919191")).
+			Italic(true).
+			Render("h : help  q : quit")
 		statusBar := styles["statusBar"].
 			Copy().
-			Width(terminalWidth - lipgloss.Width(statusBarTitle)).
+			Width(terminalWidth - (lipgloss.Width(statusBarTitle) + lipgloss.Width(statusBarHelp))).
 			Render(currentUser.Username)
 
 		return lipgloss.JoinVertical(
@@ -356,6 +367,7 @@ func (m model) View() string {
 				lipgloss.Top,
 				statusBarTitle,
 				statusBar,
+				statusBarHelp,
 			),
 		)
 	} else if m.currentAction == "help" {
@@ -382,9 +394,14 @@ func (m model) View() string {
 
 		// Status Bar
 		statusBarTitle := styles["title"].Render("TermTasks")
+		statusBarHelp := styles["statusBar"].
+			Copy().
+			Foreground(lipgloss.Color("#919191")).
+			Italic(true).
+			Render("h : help  q : quit")
 		statusBar := styles["statusBar"].
 			Copy().
-			Width(terminalWidth - lipgloss.Width(statusBarTitle)).
+			Width(terminalWidth - (lipgloss.Width(statusBarTitle) + lipgloss.Width(statusBarHelp))).
 			Render(currentUser.Username)
 
 		return lipgloss.JoinVertical(
@@ -396,6 +413,7 @@ func (m model) View() string {
 				lipgloss.Top,
 				statusBarTitle,
 				statusBar,
+				statusBarHelp,
 			),
 		)
 	}
