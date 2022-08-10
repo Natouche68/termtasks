@@ -89,11 +89,32 @@ var styles = map[string]lipgloss.Style{
 	"help": lipgloss.NewStyle().
 		Italic(true).
 		Foreground(lipgloss.Color("#8a8a8a")),
+
+	"noLabel": lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#3e3e3e")).
+		Italic(true),
+
+	"urgentLabel": lipgloss.NewStyle().
+		Padding(0, 1).
+		Background(lipgloss.Color("#eb0202")),
+
+	"canWaitLabel": lipgloss.NewStyle().
+		Padding(0, 1).
+		Background(lipgloss.Color("#e5ed00")),
+
+	"doingLabel": lipgloss.NewStyle().
+		Padding(0, 1).
+		Background(lipgloss.Color("#0092e3")),
+
+	"needToTalkLabel": lipgloss.NewStyle().
+		Padding(0, 1).
+		Background(lipgloss.Color("#fd1bff")),
 }
 
 type task struct {
 	name      string
 	completed bool
+	label     string // Can be "nothing", "urgent", "canWait", "doing", or "needToTalk"
 }
 
 type project struct {
@@ -126,10 +147,12 @@ func initModel() model {
 					{
 						name:      "Create the view function",
 						completed: true,
+						label:     "nothing",
 					},
 					{
 						name:      "Add COLORS ! 🎉",
 						completed: false,
+						label:     "nothing",
 					},
 				},
 			},
@@ -139,6 +162,7 @@ func initModel() model {
 					{
 						name:      "Give carrots to Bruno",
 						completed: false,
+						label:     "nothing",
 					},
 				},
 			},
@@ -237,16 +261,40 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "alt+up":
-			selectedTask := m.projects[m.currentProject].tasks[m.currentTask]
-			m.projects[m.currentProject].tasks[m.currentTask] = m.projects[m.currentProject].tasks[m.currentTask-1]
-			m.projects[m.currentProject].tasks[m.currentTask-1] = selectedTask
-			m.currentTask -= 1
+			if m.currentAction == "tasks" {
+				selectedTask := m.projects[m.currentProject].tasks[m.currentTask]
+				m.projects[m.currentProject].tasks[m.currentTask] = m.projects[m.currentProject].tasks[m.currentTask-1]
+				m.projects[m.currentProject].tasks[m.currentTask-1] = selectedTask
+				m.currentTask -= 1
+			}
 
 		case "alt+down":
-			selectedTask := m.projects[m.currentProject].tasks[m.currentTask]
-			m.projects[m.currentProject].tasks[m.currentTask] = m.projects[m.currentProject].tasks[m.currentTask+1]
-			m.projects[m.currentProject].tasks[m.currentTask+1] = selectedTask
-			m.currentTask += 1
+			if m.currentAction == "tasks" {
+				selectedTask := m.projects[m.currentProject].tasks[m.currentTask]
+				m.projects[m.currentProject].tasks[m.currentTask] = m.projects[m.currentProject].tasks[m.currentTask+1]
+				m.projects[m.currentProject].tasks[m.currentTask+1] = selectedTask
+				m.currentTask += 1
+			}
+
+		case "l":
+			if m.currentAction == "tasks" {
+				switch m.projects[m.currentProject].tasks[m.currentTask].label {
+				case "nothing":
+					m.projects[m.currentProject].tasks[m.currentTask].label = "urgent"
+
+				case "urgent":
+					m.projects[m.currentProject].tasks[m.currentTask].label = "canWait"
+
+				case "canWait":
+					m.projects[m.currentProject].tasks[m.currentTask].label = "doing"
+
+				case "doing":
+					m.projects[m.currentProject].tasks[m.currentTask].label = "needToTalk"
+
+				case "needToTalk":
+					m.projects[m.currentProject].tasks[m.currentTask].label = "nothing"
+				}
+			}
 		}
 	}
 
@@ -303,10 +351,33 @@ func (m model) View() string {
 				}
 			}
 
+			var label string
+			switch task.label {
+			case "nothing":
+				label = styles["noLabel"].Render("No label")
+
+			case "urgent":
+				label = styles["urgentLabel"].Render("Urgent")
+
+			case "canWait":
+				label = styles["canWaitLabel"].Render("Can Wait")
+
+			case "doing":
+				label = styles["doingLabel"].Render("Doing")
+
+			case "needToTalk":
+				label = styles["needToTalkLabel"].Render("Need to talk about")
+			}
+
 			tasks = lipgloss.JoinVertical(
 				lipgloss.Left,
 				tasks,
-				renderedTask,
+				lipgloss.JoinHorizontal(
+					lipgloss.Top,
+					renderedTask,
+					"  ",
+					label,
+				),
 			)
 		}
 		if len(m.projects[m.currentProject].tasks) == 0 {
