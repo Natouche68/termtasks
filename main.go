@@ -235,6 +235,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.currentTask = len(m.projects[m.currentProject].tasks) - 1
 				}
 			}
+
+		case "alt+up":
+			selectedTask := m.projects[m.currentProject].tasks[m.currentTask]
+			m.projects[m.currentProject].tasks[m.currentTask] = m.projects[m.currentProject].tasks[m.currentTask-1]
+			m.projects[m.currentProject].tasks[m.currentTask-1] = selectedTask
+			m.currentTask -= 1
+
+		case "alt+down":
+			selectedTask := m.projects[m.currentProject].tasks[m.currentTask]
+			m.projects[m.currentProject].tasks[m.currentTask] = m.projects[m.currentProject].tasks[m.currentTask+1]
+			m.projects[m.currentProject].tasks[m.currentTask+1] = selectedTask
+			m.currentTask += 1
 		}
 	}
 
