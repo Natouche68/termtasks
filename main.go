@@ -457,7 +457,7 @@ func (m model) View() string {
 	} else if m.currentAction == "help" {
 		title := styles["title"].Render("Help") + "\n"
 
-		help := styles["help"].Render(fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
+		help := styles["help"].Render(fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
 			"q or ctrl+c  : quit",
 			"h            : help",
 			"",
@@ -468,6 +468,7 @@ func (m model) View() string {
 			"",
 			"a            : add a task",
 			"d            : delete the current task",
+			"l            : change the label of the current task",
 		))
 
 		// Blank between help and status bar
